@@ -46,3 +46,28 @@ class Upsample(BackendHandler):
         cls.make_tensor_from_onnx_node(
             node, attrs=attrs, c_last_only=True, **kwargs)
     ]
+  
+  @classmethod
+  def version_1(cls, node, **kwargs):
+    from pdb import set_trace as bp
+    x = kwargs["tensor_dict"][node.inputs[0]]
+    x_shape = x.get_shape().as_list()
+    attrs = copy.deepcopy(node.attrs)
+    height_scale = attrs["height_scale"]
+    width_scale = attrs["width_scale"]
+    new_height = np.floor(x_shape[2] * height_scale)
+    new_width = np.floor(x_shape[3] * width_scale)
+
+    mode = attrs.get("mode", "nearest")
+    if mode.lower() == "bilinear":
+      mode = tf.image.ResizeMethod.BILINEAR
+    else:
+      mode = tf.image.ResizeMethod.NEAREST_NEIGHBOR
+
+    attrs["size"] = np.array((new_height, new_width), dtype=np.int32)
+    attrs["method"] = mode
+
+    return [
+        cls.make_tensor_from_onnx_node(
+            node, attrs=attrs, c_last_only=True, **kwargs)
+    ]
